@@ -1,0 +1,127 @@
+From 454a51c1efe2926f1e20f1b2af9b0a628fc51812 Mon Sep 17 00:00:00 2001
+From: PKP <pkp.contact@gmail.com>
+Date: Fri, 17 Apr 2020 11:07:13 -0700
+Subject: [PATCH] Patch to migrate supplementary files as submission files instead of galleys
+
+---
+ classes/install/Upgrade.inc.php | 77 +--------------------------------
+ dbscripts/xml/upgrade.xml       |  1 -
+ 2 files changed, 1 insertion(+), 77 deletions(-)
+
+diff --git a/classes/install/Upgrade.inc.php b/classes/install/Upgrade.inc.php
+index 382f0af9ec..1a50d8c68b 100644
+--- a/classes/install/Upgrade.inc.php
++++ b/classes/install/Upgrade.inc.php
+@@ -1049,55 +1049,6 @@ class Upgrade extends Installer {
+ 
+ 			// if it is a remote supp file and article is published, convert it to a remote galley
+ 			if (!$row['file_id'] && $row['remote_url'] != '' && $article->getStatus() == STATUS_PUBLISHED) {
+-				$remoteSuppFileSettingsResult = $submissionFileDao->retrieve('SELECT * FROM article_supp_file_settings WHERE supp_id = ? AND setting_value IS NOT NULL', array($row['supp_id']));
+-				$extraRemoteGalleySettings = $remoteSuppFileTitle = array();
+-				while (!$remoteSuppFileSettingsResult->EOF) {
+-					$rsfRow = $remoteSuppFileSettingsResult->getRowAssoc(false);
+-					$remoteSuppFileSettingsResult->MoveNext();
+-					switch ($rsfRow['setting_name']) {
+-						case 'title':
+-							$remoteSuppFileTitle[$rsfRow['locale']] = $rsfRow['setting_value'];
+-							break;
+-						case 'pub-id::doi':
+-						case 'pub-id::other::urn':
+-						case 'pub-id::publisher-id':
+-						case 'urnSuffix':
+-						case 'doiSuffix':
+-						case 'datacite::registeredDoi':
+-							$extraRemoteGalleySettings[$rsfRow['setting_name']] = $rsfRow['setting_value'];
+-							break;
+-						default:
+-							// other settings are not relevant for remote galleys
+-							break;
+-					}
+-				}
+-				$remoteSuppFileSettingsResult->Close();
+-
+-				// Converted from DAO call to raw SQL because submission_id is no longer available post-schema sync.
+-				$articleGalleyDao->update(
+-					'INSERT INTO submission_galleys (locale, submission_id, remote_url, label) VALUES (?, ?, ?, ?)',
+-					array(
+-						$article->getLocale(),
+-						$article->getId(),
+-						$row['remote_url'],
+-						$remoteSuppFileTitle[$article->getLocale()],
+-					)
+-				);
+-				$galleyId = $articleGalleyDao->getInsertId();
+-
+-				// Preserve extra settings. (Plugins may not be loaded, so other mechanisms might not work.)
+-				foreach ($extraRemoteGalleySettings as $name => $value) {
+-					$submissionFileDao->update(
+-						'INSERT INTO submission_galley_settings (galley_id, setting_name, setting_value, setting_type) VALUES (?, ?, ?, ?)',
+-						array(
+-							$galleyId,
+-							$name,
+-							$value,
+-							'string'
+-						)
+-					);
+-				}
+-
+ 				// continue with the next supp file
+ 				continue;
+ 			}
+@@ -1346,7 +1297,7 @@ class Upgrade extends Installer {
+ 			foreach ((array) $submissionFiles as $submissionFile) {
+ 				$submissionFile->setGenreId($genre->getId());
+ 				$submissionFile->setUploaderUserId($creatorUserId);
+-				$fileStage = $article->getStatus() == STATUS_PUBLISHED ? SUBMISSION_FILE_PROOF : SUBMISSION_FILE_SUBMISSION;
++				$fileStage = SUBMISSION_FILE_SUBMISSION;
+ 				$submissionFile->setFileStage($fileStage);
+ 				$submissionFileDao->updateObject($submissionFile);
+ 			}
+@@ -1417,32 +1368,6 @@ class Upgrade extends Installer {
+ 					);
+ 				}
+ 
+-				if ($article->getStatus() == STATUS_PUBLISHED) {
+-					// Converted from DAO call to raw SQL because submission_id is no longer available post-schema sync.
+-					$articleGalleyDao->update(
+-						'INSERT INTO submission_galleys (locale, submission_id, file_id, label) VALUES (?, ?, ?, ?)',
+-						array(
+-							$article->getLocale(),
+-							$article->getId(),
+-							$submissionFile->getFileId(),
+-							$submissionFile->getName($article->getLocale())
+-						)
+-					);
+-					$galleyId = $articleGalleyDao->getInsertId();
+-
+-					// Preserve extra settings. (Plugins may not be loaded, so other mechanisms might not work.)
+-					foreach ($extraGalleySettings as $name => $value) {
+-						$submissionFileDao->update(
+-							'INSERT INTO submission_galley_settings (galley_id, setting_name, setting_value, setting_type) VALUES (?, ?, ?, ?)',
+-							array(
+-								$galleyId,
+-								$name,
+-								$value,
+-								'string'
+-							)
+-						);
+-					}
+-				}
+ 			}
+ 		}
+ 		$suppFilesResult->Close();
+diff --git a/dbscripts/xml/upgrade.xml b/dbscripts/xml/upgrade.xml
+index 584245be99..d42c31e70f 100644
+--- a/dbscripts/xml/upgrade.xml
++++ b/dbscripts/xml/upgrade.xml
+@@ -217,7 +217,6 @@
+ 	</upgrade>
+ 
+ 	<upgrade minversion="3.0.0.0" maxversion="3.1.0.9">
+-		<code function="repairSuppFilesFilestage" />
+ 		<code function="fixAuthorGroup" /><!-- Run again after previous invalid fix (#3289) -->
+ 	</upgrade>
+ 
+-- 
+2.17.2
+
