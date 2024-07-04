@@ -1,18 +1,8 @@
-From 454a51c1efe2926f1e20f1b2af9b0a628fc51812 Mon Sep 17 00:00:00 2001
-From: PKP <pkp.contact@gmail.com>
-Date: Fri, 17 Apr 2020 11:07:13 -0700
-Subject: [PATCH] Patch to migrate supplementary files as submission files instead of galleys
-
----
- classes/install/Upgrade.inc.php | 77 +--------------------------------
- dbscripts/xml/upgrade.xml       |  1 -
- 2 files changed, 1 insertion(+), 77 deletions(-)
-
 diff --git a/classes/install/Upgrade.inc.php b/classes/install/Upgrade.inc.php
-index 382f0af9ec..1a50d8c68b 100644
+index fe545616cc..9c565e89a1 100644
 --- a/classes/install/Upgrade.inc.php
 +++ b/classes/install/Upgrade.inc.php
-@@ -1049,55 +1049,6 @@ class Upgrade extends Installer {
+@@ -1062,55 +1062,6 @@ class Upgrade extends Installer {
  
  			// if it is a remote supp file and article is published, convert it to a remote galley
  			if (!$row['file_id'] && $row['remote_url'] != '' && $article->getStatus() == STATUS_PUBLISHED) {
@@ -42,7 +32,7 @@ index 382f0af9ec..1a50d8c68b 100644
 -
 -				// Converted from DAO call to raw SQL because submission_id is no longer available post-schema sync.
 -				$articleGalleyDao->update(
--					'INSERT INTO submission_galleys (locale, submission_id, remote_url, label) VALUES (?, ?, ?, ?)',
+-					'INSERT INTO temp_submission_galleys (locale, submission_id, remote_url, label) VALUES (?, ?, ?, ?)',
 -					array(
 -						$article->getLocale(),
 -						$article->getId(),
@@ -55,7 +45,7 @@ index 382f0af9ec..1a50d8c68b 100644
 -				// Preserve extra settings. (Plugins may not be loaded, so other mechanisms might not work.)
 -				foreach ($extraRemoteGalleySettings as $name => $value) {
 -					$submissionFileDao->update(
--						'INSERT INTO submission_galley_settings (galley_id, setting_name, setting_value, setting_type) VALUES (?, ?, ?, ?)',
+-						'INSERT INTO temp_submission_galley_settings (galley_id, setting_name, setting_value, setting_type) VALUES (?, ?, ?, ?)',
 -						array(
 -							$galleyId,
 -							$name,
@@ -68,7 +58,7 @@ index 382f0af9ec..1a50d8c68b 100644
  				// continue with the next supp file
  				continue;
  			}
-@@ -1346,7 +1297,7 @@ class Upgrade extends Installer {
+@@ -1359,7 +1310,7 @@ class Upgrade extends Installer {
  			foreach ((array) $submissionFiles as $submissionFile) {
  				$submissionFile->setGenreId($genre->getId());
  				$submissionFile->setUploaderUserId($creatorUserId);
@@ -77,19 +67,19 @@ index 382f0af9ec..1a50d8c68b 100644
  				$submissionFile->setFileStage($fileStage);
  				$submissionFileDao->updateObject($submissionFile);
  			}
-@@ -1417,32 +1368,6 @@ class Upgrade extends Installer {
+@@ -1430,32 +1381,6 @@ class Upgrade extends Installer {
  					);
  				}
  
 -				if ($article->getStatus() == STATUS_PUBLISHED) {
 -					// Converted from DAO call to raw SQL because submission_id is no longer available post-schema sync.
 -					$articleGalleyDao->update(
--						'INSERT INTO submission_galleys (locale, submission_id, file_id, label) VALUES (?, ?, ?, ?)',
+-						'INSERT INTO temp_submission_galleys (locale, submission_id, file_id, label) VALUES (?, ?, ?, ?)',
 -						array(
--							$article->getLocale(),
+-							empty($article->getLocale()) ? AppLocale::getPrimaryLocale() : $article->getLocale(),
 -							$article->getId(),
 -							$submissionFile->getFileId(),
--							$submissionFile->getName($article->getLocale())
+-							$submissionFile->getName(empty($article->getLocale()) ? AppLocale::getPrimaryLocale() : $article->getLocale())
 -						)
 -					);
 -					$galleyId = $articleGalleyDao->getInsertId();
@@ -111,10 +101,10 @@ index 382f0af9ec..1a50d8c68b 100644
  		}
  		$suppFilesResult->Close();
 diff --git a/dbscripts/xml/upgrade.xml b/dbscripts/xml/upgrade.xml
-index 584245be99..d42c31e70f 100644
+index 4368eee94f..bfd97be6d0 100644
 --- a/dbscripts/xml/upgrade.xml
 +++ b/dbscripts/xml/upgrade.xml
-@@ -217,7 +217,6 @@
+@@ -224,7 +224,6 @@
  	</upgrade>
  
  	<upgrade minversion="3.0.0.0" maxversion="3.1.0.9">
@@ -122,6 +112,3 @@ index 584245be99..d42c31e70f 100644
  		<code function="fixAuthorGroup" /><!-- Run again after previous invalid fix (#3289) -->
  	</upgrade>
  
--- 
-2.17.2
-
