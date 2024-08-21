@@ -1,8 +1,7 @@
-diff --git a/classes/install/Upgrade.inc.php b/classes/install/Upgrade.inc.php
-index fe545616cc..9c565e89a1 100644
---- a/classes/install/Upgrade.inc.php
-+++ b/classes/install/Upgrade.inc.php
-@@ -1062,55 +1062,6 @@ class Upgrade extends Installer {
+diff -ruN a/classes/install/Upgrade.inc.php b/classes/install/Upgrade.inc.php
+--- a/classes/install/Upgrade.inc.php	2024-08-22 02:51:15.655888100 +0700
++++ b/classes/install/Upgrade.inc.php	2024-08-22 02:51:35.910704300 +0700
+@@ -1062,55 +1062,6 @@
  
  			// if it is a remote supp file and article is published, convert it to a remote galley
  			if (!$row['file_id'] && $row['remote_url'] != '' && $article->getStatus() == STATUS_PUBLISHED) {
@@ -58,7 +57,7 @@ index fe545616cc..9c565e89a1 100644
  				// continue with the next supp file
  				continue;
  			}
-@@ -1359,7 +1310,7 @@ class Upgrade extends Installer {
+@@ -1359,7 +1310,7 @@
  			foreach ((array) $submissionFiles as $submissionFile) {
  				$submissionFile->setGenreId($genre->getId());
  				$submissionFile->setUploaderUserId($creatorUserId);
@@ -67,10 +66,11 @@ index fe545616cc..9c565e89a1 100644
  				$submissionFile->setFileStage($fileStage);
  				$submissionFileDao->updateObject($submissionFile);
  			}
-@@ -1430,32 +1381,6 @@ class Upgrade extends Installer {
+@@ -1429,33 +1380,6 @@
+ 						)
  					);
  				}
- 
+-
 -				if ($article->getStatus() == STATUS_PUBLISHED) {
 -					// Converted from DAO call to raw SQL because submission_id is no longer available post-schema sync.
 -					$articleGalleyDao->update(
@@ -100,10 +100,9 @@ index fe545616cc..9c565e89a1 100644
  			}
  		}
  		$suppFilesResult->Close();
-diff --git a/dbscripts/xml/upgrade.xml b/dbscripts/xml/upgrade.xml
-index 4368eee94f..bfd97be6d0 100644
---- a/dbscripts/xml/upgrade.xml
-+++ b/dbscripts/xml/upgrade.xml
+diff -ruN a/dbscripts/xml/upgrade.xml b/dbscripts/xml/upgrade.xml
+--- a/dbscripts/xml/upgrade.xml	2024-08-22 03:42:44.530452000 +0700
++++ b/dbscripts/xml/upgrade.xml	2024-08-22 03:44:13.311787100 +0700
 @@ -224,7 +224,6 @@
  	</upgrade>
  
